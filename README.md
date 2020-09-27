@@ -9,6 +9,7 @@
 
 # Test task for App-Smart
 
+
 ###Installation
 
 run `git clone`
@@ -21,3 +22,5 @@ fill in the `.env` file, note the `.env.example`
 
 run `php artisan migrate`
 
+Для комфортной работы на сервере стоит запустить Redis.
+Не доделал покрытие тестами и осталась костыльная пагинация. Позже добью.
