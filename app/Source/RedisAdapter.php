@@ -5,15 +5,16 @@ namespace App\Source;
 
 
 use Illuminate\Cache\RedisStore;
+use Illuminate\Support\Facades\Redis;
 use Psr\SimpleCache\CacheInterface;
 
 class RedisAdapter implements CacheInterface
 {
     protected RedisStore $redis;
 
-    public function __construct(RedisStore $store)
+    public function __construct()
     {
-        $this->redis = $store;
+        $this->redis = new RedisStore(Redis::getFacadeRoot(), 'food_facts_');;
     }
 
     public function get($key, $default = null)

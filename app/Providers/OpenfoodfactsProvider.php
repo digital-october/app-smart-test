@@ -2,9 +2,6 @@
 
 namespace App\Providers;
 
-use App\Source\RedisAdapter;
-use Illuminate\Cache\RedisStore;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\ServiceProvider;
 
 use App\Source\Openfoodfacts\OpenfoodfactsSource;
@@ -29,10 +26,10 @@ class OpenfoodfactsProvider extends ServiceProvider
     public function boot()
     {
         $this->app->singleton(OpenfoodfactsSource::class, function ($app) {
-            $storage = new RedisStore(Redis::getFacadeRoot(), 'food_facts_');
-            $cache = new RedisAdapter($storage);
+            $cacheClass = config('cache.cache_instance');
+            $cacheInstance = new $cacheClass();
 
-            return new OpenfoodfactsSource($cache);
+            return new OpenfoodfactsSource($cacheInstance);
         });
     }
 }
