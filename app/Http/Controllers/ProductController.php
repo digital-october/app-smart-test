@@ -13,11 +13,12 @@ class ProductController extends Controller
      * Display a listing of the resource.
      *
      * @param IndexProductsRequest $request
-     *
+     * @param OpenfoodfactsSource $source
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View
      * @throws \App\Exceptions\OpenFoodsFacts\OopsException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function index(IndexProductsRequest $request)
+    public function index(IndexProductsRequest $request, OpenfoodfactsSource $source)
     {
         $defaultParameters = [
             'action' => 'process',
@@ -25,8 +26,8 @@ class ProductController extends Controller
             'json' => 1,
         ];
         $parameters = array_merge($defaultParameters, $request->validated());
-        $data = OpenfoodfactsSource::get($parameters);
-        $data['products'] = OpenfoodfactsSource::checkExists($data['products']);
+        $data = $source->get($parameters);
+        $data = Product::checkExists($data);
 
         return view('products.index', compact('data'));
     }

@@ -3,20 +3,13 @@
 
 namespace App\Source\Openfoodfacts;
 
-use GuzzleHttp\Client as GuzzleClient;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
+use GuzzleHttp\Client;
+use Psr\SimpleCache\CacheInterface;
 
-use App\Models\Product;
 use App\Exceptions\OpenFoodsFacts\OopsException;
 
 final class OpenfoodfactsSource
 {
-    /**
-     * Prefix to data from Redis.
-     */
-    private const REDIS_PREFIX = 'food_facts_';
-
     /**
      * Data retention time in Redis.
      * (10 minutes)
@@ -28,26 +21,40 @@ final class OpenfoodfactsSource
      */
     private const URL = 'https://world.openfoodfacts.org/cgi/search.pl';
 
+    private CacheInterface $cache;
+
+    private Client $client;
+
+    /**
+     * OpenfoodfactsSource constructor.
+     *
+     * @param CacheInterface $cache
+     */
+    public function __construct(CacheInterface $cache)
+    {
+        $this->cache = $cache;
+        $this->client = new Client();
+    }
 
     /**
      * Query the source data.
      *
      * @param array $parameters
-     * @return array|mixed
+     * @return mixed
      * @throws OopsException
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public static function get(array $parameters)
+    public function get(array $parameters)
     {
         try {
-            $redisKey = self::REDIS_PREFIX . implode('_', $parameters);
-            $redisResult = Redis::get($redisKey);
+            $redisKey = implode('_', $parameters);
+            $redisResult = $this->cache->get($redisKey);
 
             if (!empty($redisResult)) {
-                return json_decode($redisResult, true);
+                return $redisResult;
             }
 
-            $client = new GuzzleClient();
-            $response = $client->request('GET', self::URL, [
+            $response = $this->client->request('GET', self::URL, [
                 'query' => $parameters,
                 'http_errors' => false,
                 'verify' => false,
@@ -58,36 +65,12 @@ final class OpenfoodfactsSource
             $result = $handler->getContents();
 
             if (!empty($result)) {
-                Redis::set($redisKey, json_encode($result));
-                Redis::expire($redisKey, self::REDIS_TIMEOUT);
+                $this->cache->set($redisKey, $result, self::REDIS_TIMEOUT);
             }
 
             return $result;
         } catch (\Throwable $exception) {
-            Log::error($exception);
-
-            throw new OopsException($exception->getMessage());
+            throw new OopsException($exception);
         }
-    }
-
-    /**
-     * Checks if these products are in the database.
-     *
-     * @param array $products
-     * @return array
-     */
-    public static function checkExists(array $products): array
-    {
-        $saved = Product::whereIntegerInRaw('_id', collect($products)->pluck('_id'))->get();
-
-        foreach ($saved as $item) {
-            foreach ($products as $key => $product) {
-                if ($item->_id === (int)$product['_id']) {
-                    $products[$key]['saved'] = true;
-                }
-            }
-        }
-
-        return $products;
     }
 }

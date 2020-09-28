@@ -2,6 +2,7 @@
 
 namespace App\Exceptions\OpenFoodsFacts;
 
+use Throwable;
 use Exception;
 
 class OopsException extends Exception
@@ -15,18 +16,22 @@ class OopsException extends Exception
     protected $message;
 
     /**
-     * BadRequestException constructor.
+     * OopsException constructor.
      *
-     * @param string $message
+     * @param Throwable $throwable
      */
-    public function __construct(string $message = 'Oops, there was an error in products request')
+    public function __construct(Throwable $throwable)
     {
-        parent::__construct($message);
+        parent::__construct($throwable->getMessage());
 
-        $this->message = $message;
+        $this->message = $throwable->getMessage();
     }
 
-
+    /**
+     * Render view with error.
+     *
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     */
     public function render()
     {
         return view('error', [
